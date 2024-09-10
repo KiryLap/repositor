@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <limits>
 
 using namespace std;
 
@@ -14,10 +15,32 @@ struct Pipe {
     void read() {
         cout << "Введите название трубы: ";
         cin >> name;
-        cout << "Введите длину трубы (в км): ";
-        cin >> length;
-        cout << "Введите диаметр трубы (в см): ";
-        cin >> diameter;
+
+        while (true) {
+            cout << "Введите длину трубы (в км): ";
+            cin >> length;
+            if (cin.fail() || length < 0 || length == 0) {
+                cin.clear(); 
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Ошибка! Длина трубы должна быть неотрицательным числом. Попробуйте снова." << endl;
+            } else {
+                cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+                break; 
+            }
+        }
+
+        while (true) {
+            cout << "Введите диаметр трубы (в см): ";
+            cin >> diameter;
+            if (cin.fail() || diameter < 0 || diameter == 0) {
+                cin.clear(); 
+                cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+                cout << "Ошибка! Диаметр трубы должен быть неотрицательным числом. Попробуйте снова." << endl;
+            } else {
+                cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+                break; 
+            }
+        }
         underRepair = false;
     }
 
@@ -35,8 +58,13 @@ struct Pipe {
         }
 
     void toggleRepair() {
-        underRepair = !underRepair;
-        cout << "Признак \"в ремонте\" изменён на: " << (underRepair ? "Да" : "Нет") << endl;
+        if (length > 0) {
+            underRepair = !underRepair;
+            cout << "Признак \"в ремонте\" изменён на: " << (underRepair ? "Да" : "Нет") << endl;
+        }
+        else {
+            cout << "Трубы нет" << endl;
+        }
     }
 
     void saveToFile(ofstream& file) {
@@ -63,17 +91,44 @@ struct CompressorStation {
     void read() {
         cout << "Введите название КС: ";
         cin >> name;
-        do {
+
+        while (true) {
             cout << "Введите количество цехов: ";
             cin >> totalShops;
+            if (cin.fail() || totalShops < 0 || totalShops == 0) { 
+                cin.clear(); 
+                cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+                cout << "Ошибка! Количество цехов должно быть неотрицательным числом. Попробуйте снова." << endl;
+            } else {
+                break;
+            }
+        }
+
+        while (true) {
             cout << "Введите количество цехов в работе: ";
             cin >> operationalShops;
-            if (totalShops < operationalShops) {
-                cout << "Количество цехов не должно превышать количество цехов в работе. Попробуйте снова." << endl;
+            if (cin.fail() || operationalShops < 0 || operationalShops == 0) {
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Ошибка! Количество цехов в работе должно быть неотрицательным числом. Попробуйте снова." << endl;
+            } else if (operationalShops > totalShops) {
+                cout << "Количество цехов в работе не должно превышать общее количество цехов. Попробуйте снова." << endl;
+            } else {
+                break; 
             }
-        } while (totalShops < operationalShops);
-        cout << "Введите эффективность: ";
-        cin >> efficiency;
+        }
+
+        while (true) {
+            cout << "Введите эффективность: ";
+            cin >> efficiency;
+            if (cin.fail() || efficiency < 0 || efficiency == 0) {
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Ошибка! Эффективность должна быть неотрицательным числом. Попробуйте снова." << endl;
+            } else {
+                break; 
+            }
+        }
     }
 
     void display() {
@@ -141,6 +196,29 @@ void displayMenu() {
     cout << "7. Загрузить" << endl;
     cout << "0. Выход" << endl;
 }
+void saveDataToFile(Pipe & pipe, CompressorStation & cs) {
+    ofstream outFile("data.txt");
+    if (!outFile) {
+        cout << "Ошибка открытия файла!" << endl;
+        return;
+    }
+    pipe.saveToFile(outFile);
+    cs.saveToFile(outFile);
+    outFile.close();
+    cout << "Данные сохранены." << endl;
+}
+
+void loadDataFromFile(Pipe & pipe, CompressorStation & cs) {
+    ifstream inFile("data.txt");
+    if (inFile.is_open()) {
+        pipe.loadFromFile(inFile);
+        cs.loadFromFile(inFile);
+        inFile.close();
+        cout << "Данные загружены." << endl;
+    } else {
+        cout << "Ошибка открытия файла." << endl;
+    }
+}
 
 int main() {
     Pipe pipe;
@@ -169,24 +247,11 @@ int main() {
             cs.toggleShop();
             break;
         case 6: {
-            ofstream outFile("data.txt");
-            pipe.saveToFile(outFile);
-            cs.saveToFile(outFile);
-            outFile.close();
-            cout << "Данные сохранены." << endl;
+            saveDataToFile(pipe, cs);
             break;
         }
         case 7: {
-            ifstream inFile("data.txt");
-            if (inFile.is_open()) {
-                pipe.loadFromFile(inFile);
-                cs.loadFromFile(inFile);
-                inFile.close();
-                cout << "Данные загружены." << endl;
-            }
-            else {
-                cout << "Ошибка открытия файла." << endl;
-            }
+            loadDataFromFile(pipe, cs);
             break;
         }
         case 0:
