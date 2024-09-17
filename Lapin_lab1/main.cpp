@@ -325,11 +325,22 @@ void loadCompressorStationDataFromFile(CompressorStation & cs) {
 int main() {
     Pipe pipe;
     CompressorStation cs;
-    int choice;
+    int choice; 
+    string wrong;
     while (true) {
         displayMenu();
         cout << "Выберите действие: ";
+
         cin >> choice;
+        getline(cin, wrong);
+
+        if (cin.fail() || choice < 0 || choice > 7 || choice == -0 || choice == +0) {
+            cout << "Неверный ввод. Пожалуйста, введите целое число от 0 до 7." << endl;
+            cin.clear(); 
+            cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
+            continue; 
+        }
+
         cout << "-----------------------------" << endl;
 
         switch (choice) {
