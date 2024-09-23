@@ -23,6 +23,43 @@ void log(const string &action) {
         }
     }
 
+double readPositiveDouble(const string& prompt) {
+        double value;
+        while (true) {
+            cout << prompt;
+            cin >> value;
+
+            if (cin.fail() || value <= 0) {
+                cin.clear(); 
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Ошибка! Значение должно быть положительным числом. Попробуйте снова." << endl;
+            } else {
+                cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+                return value;
+            }
+        }
+    }
+
+int readPositiveInt(const string& prompt, const string& errorMsg, int max = numeric_limits<int>::max()) {
+        int value;
+        while (true) {
+            cout << prompt;
+            cin >> value;
+            if (cin.fail() || value < 0) {
+                cin.clear(); 
+                cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+                cout << errorMsg << endl;
+                log("Ошибка ввода: " + errorMsg);
+            } else if (value > max) {
+                cout << "Ошибка! Значение не должно превышать " << max << ". Попробуйте снова." << endl;
+                log("Ошибка: значение превышает допустимое.");
+            } else {
+                log("Введено значение: " + to_string(value));
+                return value;
+            }
+        }
+    }
+
 struct Pipe {
     int id;
     string name;
@@ -40,35 +77,14 @@ struct Pipe {
         full_name = name + name_line;
         log("Пользователь ввел название трубы: " + full_name);
 
-        while (true) {
-            cout << "Введите длину трубы (в км): ";
-            cin >> length;
-            if (cin.fail() || length < 0 || length == 0) {
-                cin.clear(); 
-                cin.ignore(numeric_limits<streamsize>::max(), '\n');
-                cout << "Ошибка! Длина трубы должна быть неотрицательным числом. Попробуйте снова." << endl;
-            } else {
-                cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
-                break; 
-            }
-        }
+        length = readPositiveDouble("Введите длину трубы (в км): ");
         log("Пользователь ввел длину трубы: " + to_string(length) + " км");
 
-        while (true) {
-            cout << "Введите диаметр трубы (в мм): ";
-            cin >> diameter;
-            if (cin.fail() || diameter < 0 || diameter == 0) {
-                cin.clear(); 
-                cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
-                cout << "Ошибка! Диаметр трубы должен быть неотрицательным числом. Попробуйте снова." << endl;
-            } else {
-                cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
-                break; 
-            }
-        }
+        diameter = readPositiveDouble("Введите диаметр трубы (в мм): ");
         log("Пользователь ввел диаметр трубы: " + to_string(diameter) + " мм");
         underRepair = false;
     }
+
 
     void display() const {
             if (length <= 0 && diameter <= 0) {
@@ -102,10 +118,6 @@ struct Pipe {
         return to_string(id) + ";" + full_name + ";" + to_string(length) + ";" + to_string(diameter) + ";" + to_string(underRepair);
     }
 
-    int getId() const {
-        return id;
-    }
-
     void load(const std::string &data) {
         size_t pos1 = data.find(';');
         size_t pos2 = data.find(';', pos1 + 1);
@@ -136,38 +148,8 @@ struct CompressorStation {
         getline(cin, name_line);
         full_name = name + name_line;
         log("Введено название КС: " + full_name);
-
-        while (true) {
-            cout << "Введите количество цехов: ";
-            cin >> totalShops;
-            if (cin.fail() || totalShops < 0 || totalShops == 0) { 
-                cin.clear(); 
-                cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
-                cout << "Ошибка! Количество цехов должно быть неотрицательным числом. Попробуйте снова." << endl;
-                log("Ошибка ввода количества цехов.");
-            } else {
-                log("Введено количество цехов: " + to_string(totalShops));
-                break;
-            }
-        }
-
-        while (true) {
-            cout << "Введите количество цехов в работе: ";
-            cin >> operationalShops;
-            if (cin.fail() || operationalShops < 0 || operationalShops == 0) {
-                cin.clear();
-                cin.ignore(numeric_limits<streamsize>::max(), '\n');
-                cout << "Ошибка! Количество цехов в работе должно быть неотрицательным числом. Попробуйте снова." << endl;
-                log("Ошибка ввода количества цехов в работе.");
-            } else if (operationalShops > totalShops) {
-                cout << "Количество цехов в работе не должно превышать общее количество цехов. Попробуйте снова." << endl;
-                log("Ошибка: количество цехов в работе превышает общее количество.");
-            } else {
-                log("Введено количество цехов в работе: " + to_string(operationalShops));
-                break; 
-            }
-        }
-
+        totalShops = readPositiveInt("Введите количество цехов: ", "Ошибка! Количество цехов должно быть неотрицательным числом. Попробуйте снова.");
+        operationalShops = readPositiveInt("Введите количество цехов в работе: ", "Ошибка! Количество цехов в работе должно быть неотрицательным числом. Попробуйте снова.", totalShops);
         while (true) {
             cout << "Введите эффективность в % (1-100): ";
             cin >> efficiency;
@@ -244,10 +226,6 @@ struct CompressorStation {
                to_string(operationalShops) + ";" + 
                to_string(unusedOperationalShops) + ";" + 
                to_string(efficiency);
-    }
-
-    int getId() const {
-        return id;
     }
 
     void load(const string &data) {
@@ -917,7 +895,7 @@ void loadFromFile() {
 
                     bool exists = false;
                     for (const auto& s : stations) {
-                        if (s.getId() == station.getId()) {
+                        if (s.id == station.id) {
                             exists = true;
                             break;
                         }
@@ -926,7 +904,7 @@ void loadFromFile() {
                         stations.push_back(station);
                         log("Загружена компрессорная станция с ID: " + to_string(station.id));
                     } else {
-                        cerr << "Компрессорная станция с ID " << station.getId() << " уже существует." << endl;
+                        cerr << "Компрессорная станция с ID " << station.id << " уже существует." << endl;
                         log("Ошибка: Компрессорная станция с ID " + to_string(station.id) + " уже существует.");
                     }
                 } else if (line.substr(0, 4) == "pipe") {
@@ -935,7 +913,7 @@ void loadFromFile() {
 
                     bool exists = false;
                     for (const auto& p : pipes) {
-                        if (p.getId() == pipe.getId()) {
+                        if (p.id == pipe.id) {
                             exists = true;
                             break;
                         }
@@ -944,7 +922,7 @@ void loadFromFile() {
                         pipes.push_back(pipe);
                         log("Загружена труба с ID: " + to_string(pipe.id));
                     } else {
-                        cerr << "Труба с ID " << pipe.getId() << " уже существует." << endl;
+                        cerr << "Труба с ID " << pipe.id << " уже существует." << endl;
                         log("Ошибка: Труба с ID " + to_string(pipe.id) + " уже существует.");
                     }
                 }
@@ -975,16 +953,12 @@ void displayMenu() {
 void runProgram() {
     PipeManager pmanager;
     CompressorStationManager cmanager;
-    Pipe pipe;
-    CompressorStation cs;
     int choice;
     string wrong;
 
     while (true) {
         displayMenu();
         cout << "Выберите действие: ";
-        
-
         cin >> choice;
         log("Пользователь выбрал действие: " + to_string(choice));
         getline(cin, wrong);
