@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <stdlib.h>
 #include <ctime>
+#include <map>
 
 using namespace std;
 
@@ -60,21 +61,59 @@ int readPositiveInt(const string& prompt, const string& errorMsg, int max = nume
         }
     }
 
-struct Pipe {
-    int id;
-    string name;
-    string name_line;
+bool isNumber(const std::string& s)
+{
+    return  s.length() < 2 and !s.empty() && std::find_if(s.begin(),
+        s.end(), [](unsigned char c) { return !std::isdigit(c); }) == s.end();
+}
+
+long numberOrDefault(const string& command){
+    if (isNumber(command)) {
+        return strtol(command.c_str(), NULL, 10);
+    }
+    return -1;
+}
+
+int inputIntInRange(const string& prompt, int minValue, int maxValue) {
+    int value;
+
+    while (true) {
+        cout << prompt;
+        string input;
+        getline(cin, input);
+        stringstream ss(input);
+        if (ss >> value) {
+            if (ss.eof()) {
+                if (value >= minValue && value <= maxValue) {
+                    return value;
+                } else {
+                    cout << "----------------------------------------" << endl;
+                    cout << "Ошибка: введите число от " << minValue << " до " << maxValue << "." << endl;
+                    cout << "----------------------------------------" << endl;
+                }
+            } else {
+                cout << "---------------------------------------" << endl;
+                cout << "Ошибка: введите корректное целое число." << endl;
+                cout << "----------------------------------------" << endl;
+            }
+        } else {
+            cout << "----------------------------------------" << endl;
+            cout << "Ошибка: введите корректное целое число." << endl;
+            cout << "----------------------------------------" << endl;
+        }
+    }
+}
+
+class Pipe {
+public:
     string full_name;
     double length = 0;
     double diameter = 0;
     bool underRepair;
-    
 
     void read() {
         cout << "Введите название трубы: ";
-        cin >> name;
-        getline(cin, name_line);
-        full_name = name + name_line;
+        getline(cin, full_name);
         log("Пользователь ввел название трубы: " + full_name);
 
         length = readPositiveDouble("Введите длину трубы (в км): ");
@@ -85,15 +124,13 @@ struct Pipe {
         underRepair = false;
     }
 
-
     void display() const {
             if (length <= 0 && diameter <= 0) {
                 cout << "Труб нет" << endl;
                 log("Пользователь запросил данные о трубах, которые отсутствуют.");
                 cout << "-----------------------------" << endl;
             } else {
-                cout << "ID - " << id 
-                    << " : Труба: " << full_name 
+                cout << " : Труба: " << full_name 
                     << ", Длина: " << length 
                     << " км, Диаметр: " << diameter 
                     << " мм, В ремонте: " 
@@ -103,39 +140,21 @@ struct Pipe {
             }
         }
 
-    void toggleRepair() {
-        if (length > 0) {
-            underRepair = !underRepair;
-            cout << "ID: " << id << " - Признак \"в ремонте\" изменён на: " << (underRepair ? "Да" : "Нет") << endl;
-            log("Пользователь установил состояние трубы ID " + to_string(id) + string(underRepair ? " в ремонте" : " в исправном состоянии"));
-        }
-        else {
-            cout << "Трубы нет" << endl;
-        }
-    }
-
-    string save() const {
-        return to_string(id) + ";" + full_name + ";" + to_string(length) + ";" + to_string(diameter) + ";" + to_string(underRepair);
-    }
-
-    void load(const std::string &data) {
-        size_t pos1 = data.find(';');
+    void load(const string &data) {
+        size_t pos1 = data.find(';'); 
         size_t pos2 = data.find(';', pos1 + 1);
-        size_t pos3 = data.find(';', pos2 + 1);
-        size_t pos4 = data.find(';', pos3 + 1);
+        size_t pos3 = data.find(';', pos2 + 1); 
 
-        id = std::stoi(data.substr(0, pos1)); 
-        full_name = data.substr(pos1 + 1, pos2 - pos1 - 1);
-        length = std::stod(data.substr(pos2 + 1, pos3 - pos2 - 1));
-        diameter = std::stod(data.substr(pos3 + 1, pos4 - pos3 - 1));
-        underRepair = data.substr(pos4 + 1) == "1";
+        full_name = data.substr(0, pos1); 
+        length = stod(data.substr(pos1 + 1, pos2 - pos1 - 1));
+        diameter = stod(data.substr(pos2 + 1, pos3 - pos2 - 1)); 
+        underRepair = data.substr(pos3 + 1) == "1"; 
     }
+
 };
 
-struct CompressorStation {
-    int id;
-    string name;
-    string name_line;
+class CompressorStation {
+public:
     string full_name;
     int totalShops = 0;
     int operationalShops = 0;
@@ -144,9 +163,7 @@ struct CompressorStation {
 
     void read() {
         cout << "Введите название КС: ";
-        cin >> name;
-        getline(cin, name_line);
-        full_name = name + name_line;
+        getline(cin, full_name);
         log("Введено название КС: " + full_name);
         totalShops = readPositiveInt("Введите количество цехов: ", "Ошибка! Количество цехов должно быть неотрицательным числом. Попробуйте снова.");
         operationalShops = readPositiveInt("Введите количество цехов в работе: ", "Ошибка! Количество цехов в работе должно быть неотрицательным числом. Попробуйте снова.", totalShops);
@@ -164,14 +181,14 @@ struct CompressorStation {
             }
         }
         unusedOperationalShops = ((totalShops - operationalShops) / static_cast<double>(totalShops)) * 100;
+        cin.ignore();
     }
 
     void display() const {
          if (full_name.empty() && totalShops <= 0 && operationalShops <= 0) {
                 cout << "КС нет" << endl;
         } else {
-            cout << "ID - " << id
-                << " : КС: " << full_name 
+            cout << " : КС: " << full_name 
                 << ", Всего цехов: " << totalShops
                 << ", Цехов в работе: " << operationalShops
                 << setprecision(2) << fixed << ", Процент незадействованных цехов: " << unusedOperationalShops
@@ -179,102 +196,65 @@ struct CompressorStation {
                  }
         } 
 
-    void toggleShop() {
-        if (full_name.empty() && totalShops <= 0 && operationalShops <= 0) {
-            cout << "КС нет. Запуск/Остановка цеха невозможна." << endl;
-        }
-        else {
-            int choice;
-            cout << "-----------------------------" << endl;
-            cout << "| 1. Запустить новый цех    |" << endl;
-            cout << "| 2. Остановить работу цеха |" << endl;
-            cout << "-----------------------------" << endl;
-            cout << "Выберите действие: ";
-            cin >> choice;
-            cout << "-----------------------------" << endl;
-            switch (choice) {
-                case 1: 
-                    log("Пользователь выбрал запуск цеха");
-                    if (operationalShops < totalShops) {
-                        operationalShops++;
-                        unusedOperationalShops = ((totalShops - operationalShops) / static_cast<double>(totalShops)) * 100;
-                        cout << "Запустили новый цех. Теперь в работе: " << operationalShops << endl;
-                    } else {
-                        cout << "Все цехи уже запущены." << endl;
-                    }
-                    break;
-                case 2: 
-                    log("Пользователь выбрал остановку цеха");
-                    if (operationalShops > 0) {
-                        operationalShops--;
-                        unusedOperationalShops = ((totalShops - operationalShops) / static_cast<double>(totalShops)) * 100;
-                        cout << "Остановили цех. Теперь в работе: " << operationalShops << endl;
-                    } else {
-                        cout << "Нет работающих цехов для остановки." << endl;
-                        
-                    }
-                    break;
-                default:
-                    cout << "Некорректный выбор. Попробуйте снова." << endl;
-                    break;
-            }
-        }
-    }
-
-    string save() const {
-        return to_string(id) + ";" + full_name + ";" + to_string(totalShops) + ";" + 
-               to_string(operationalShops) + ";" + 
-               to_string(unusedOperationalShops) + ";" + 
-               to_string(efficiency);
-    }
-
     void load(const string &data) {
         size_t pos1 = data.find(';');  
         size_t pos2 = data.find(';', pos1 + 1);  
         size_t pos3 = data.find(';', pos2 + 1);  
-        size_t pos4 = data.find(';', pos3 + 1);
-        size_t pos5 = data.find(';', pos4 + 1);   
+        size_t pos4 = data.find(';', pos3 + 1);  
 
-        id = stoi(data.substr(0, pos1)); 
-        full_name = data.substr(pos1 + 1, pos2 - pos1 - 1);  
-        totalShops = stoi(data.substr(pos2 + 1, pos3 - pos2 - 1));  
-        operationalShops = stoi(data.substr(pos3 + 1, pos4 - pos3 - 1));  
-        unusedOperationalShops = stoi(data.substr(pos4 + 1, pos5 - pos4 - 1));
-        efficiency = efficiency = stod(data.substr(pos5 + 1, data.length() - pos4 - 1));
+        full_name = data.substr(0, pos1);  
+        totalShops = stoi(data.substr(pos1 + 1, pos2 - pos1 - 1));  
+        operationalShops = stoi(data.substr(pos2 + 1, pos3 - pos2 - 1));  
+        unusedOperationalShops = stoi(data.substr(pos3 + 1, pos4 - pos3 - 1));
+        efficiency = efficiency = stod(data.substr(pos4 + 1, data.length() - pos3 - 1));
     }
 };
 
-vector<Pipe> pipes;
+map<int, Pipe> pipes;
+map<int, CompressorStation> stations;
 
-vector<CompressorStation> stations;
-
-struct PipeManager {
+class PipeManager {
+private:
     int nextId = 1;
-    int id;
+
+public:
+    
+    string savePipe(const Pipe &pipe) const {
+            return pipe.full_name + ";" + to_string(pipe.length) + ";" + to_string(pipe.diameter) + ";" + to_string(pipe.underRepair);
+        }
+
+    void toggleRepair(Pipe &pipe, int id) {
+        if (pipe.length > 0) {
+            pipe.underRepair = !pipe.underRepair;
+            cout << "ID: " << id << " - Признак \"в ремонте\" изменён на: " << (pipe.underRepair ? "Да" : "Нет") << endl;
+            log("Пользователь установил состояние трубы ID " + to_string(id) + string(pipe.underRepair ? " в ремонте" : " в исправном состоянии"));
+        }
+        else {
+            cout << "Трубы нет" << endl;
+        }
+    }
 
     void addPipe() {
-        Pipe newPipe;
-        while (true) {
-            bool idExists = false;
-            for (const auto& pipe : pipes) {
-                if (pipe.id == nextId) {
-                    idExists = true;
-                    break;
-                }
-            }
-            if (!idExists) {
-                break; 
-            }
-            nextId++; 
+        Pipe newPipe; 
+        newPipe.read(); 
+
+        while (pipes.find(nextId) != pipes.end()) {
+            nextId++;
         }
-        newPipe.id = nextId++;
-        newPipe.read();
-        pipes.push_back(newPipe);
-        cout << "Труба добавлена." << endl;
-        log("Труба добавлена в систему. ID: " + to_string(newPipe.id));
+
+        pipes[nextId] = newPipe;
+
+        cout << "Труба добавлена. ID: " << nextId << endl;
+        log("Труба добавлена в систему. ID: " + to_string(nextId));
+
+        nextId++; 
     }
 
     void editPipes() {
+        if (pipes.empty()) {
+            cout << "Список труб пуст. Редактирование невозможно." << endl;
+            return; 
+        }
         cout << "Введите ID труб для редактирования, разделяя запятыми (или * для редактирования всех): ";
         string input;
         getline(cin, input);
@@ -282,38 +262,35 @@ struct PipeManager {
         string idStr;
         vector<int> ids;
         vector<int> nonExistentIds;
-        
+
         if (input == "*") {
-            for (auto &pipe : pipes) {
-                pipe.toggleRepair();
+            for (auto &pipePair : pipes) { 
+                toggleRepair(pipePair.second, pipePair.first); 
             }
             cout << "Все трубы обновлены." << endl;
             log("Пользователь обновил статус 'в ремонте' у всех труб.");
         } else {
-             while (getline(ss, idStr, ',')) {
+            while (getline(ss, idStr, ',')) {
                 try {
-                    int id = stoi(idStr);
+                    int id = stoi(idStr); 
                     ids.push_back(id);
-                } catch (const invalid_argument&) {
+                } catch (const invalid_argument &) {
                     cout << "Ошибка: не является допустимым целым числом. Попробуйте снова." << endl;
                     return;
-                } catch (const out_of_range&) {
-                    cout << "Ошибка: Значение выходит за пределы допустимого диапазона." << endl;
+                } catch (const out_of_range &) {
+                    cout << "Ошибка: значение выходит за пределы допустимого диапазона." << endl;
                     return;
                 }
             }
 
             bool edited = false;
             for (int id : ids) {
-                auto it = find_if(pipes.begin(), pipes.end(), [&id](const Pipe& pipe) {
-                    return pipe.id == id;
-                });
-                if (it != pipes.end()) {
-                    it->toggleRepair();
-                    log("Пользователь обновил статус трубы с ID: " + to_string(id));
+                auto it = pipes.find(id); 
+                if (it != pipes.end()) { 
+                    toggleRepair(it->second, id); 
                     edited = true;
                 } else {
-                    nonExistentIds.push_back(id);
+                    nonExistentIds.push_back(id); 
                 }
             }
 
@@ -335,7 +312,11 @@ struct PipeManager {
     }
 
     void deletePipes() {
-        cout << "Введите ID труб для удаления, разделяя запятыми: ";
+        if (pipes.empty()) {
+            cout << "Список труб пуст. Удаление невозможно." << endl;
+            return; 
+        }
+        cout << "Введите ID труб для удаления, разделяя запятыми (или * для удаления всех): ";
         string input;
         getline(cin, input);
 
@@ -365,31 +346,29 @@ struct PipeManager {
                 return;
             }
         }
-        
+    
         for (int id : ids) {
-            auto it = find_if(pipes.begin(), pipes.end(), [&id](const Pipe& pipe) {
-                return pipe.id == id;
-            });
+            auto it = pipes.find(id); 
 
             if (it != pipes.end()) {
                 pipes.erase(it); 
                 cout << "Труба с ID " << id << " удалена." << endl;
                 log("Удалена труба с ID: " + to_string(id));
             } else {
-                nonExistentIds.push_back(id);
+                nonExistentIds.push_back(id); 
             }
         }
 
         if (!nonExistentIds.empty()) {
-                cout << "Труб(/ы) с ID: ";
-                for (size_t i = 0; i < nonExistentIds.size(); ++i) {
-                    cout << nonExistentIds[i];
-                    if (i < nonExistentIds.size() - 1) {
-                        cout << ", ";
-                    }
+            cout << "Труб(/ы) с ID: ";
+            for (size_t i = 0; i < nonExistentIds.size(); ++i) {
+                cout << nonExistentIds[i];
+                if (i < nonExistentIds.size() - 1) {
+                    cout << ", ";
                 }
-                cout << " не существу(ет/ют)." << endl;
             }
+            cout << " не существу(ет/ют)." << endl;
+        }
     }
 
     void displayAllPipes() const {
@@ -399,7 +378,8 @@ struct PipeManager {
             cout << "Список всех труб:" << endl;
             cout << endl;
             for (const auto &pipe : pipes) {
-                pipe.display();
+                cout << "ID " <<pipe.first;
+                pipe.second.display();
             }
             cout << endl;
         }
@@ -407,116 +387,263 @@ struct PipeManager {
         log("Пользователь запросил список труб.");
     }
 
-    void searchPipesTogether() {
-        string searchName;
-        bool repairStatus;
-        log("Пользователь запустил поиск труб по фильтру 'Объеденённый'.");
-        cout << "-----------------------------" << endl;
-        cout << "Введите название трубы для поиска: ";
-        cin >> searchName;
-        log("Поиск труб 'Объеденённый': Введено имя:" + searchName);
+    void editPipesFound(const vector<int>& foundIds) {
+    cout << "Введите ID труб для редактирования, разделяя запятыми (или * для редактирования всех): ";
+    string input;
+    getline(cin, input);
+    stringstream ss(input);
+    string idStr;
+    vector<int> ids;
+    vector<int> nonExistentIds;
 
-        cout << "-----------------------------" << endl;
-        cout << "Поиск труб 'в ремонте'? (1 - да, 0 - нет): ";
-        cin >> repairStatus;
-        log("Поиск труб 'Объеденённый': Введён статус (1 - да, 0 - нет):" + to_string(repairStatus));
-        if (pipes.empty()) {
-            cout << "-----------------------------" << endl;
-            cout << "По данному запросу ничего не найдено" << endl;
-            log("Пользователь ничего не нашёл по данному фильтру.");
+    if (input == "*") {
+        // Обновляем только найденные трубы
+        for (int id : foundIds) {
+            auto it = pipes.find(id); 
+            if (it != pipes.end()) {
+                toggleRepair(it->second, id);
+            }
         }
-        else {
-            cout << "-----------------------------" << endl;
-            cout << "Результаты поиска труб:\n";
-            for (const auto& pipe : pipes) {
-                if (pipe.name == searchName && pipe.underRepair == repairStatus) {
-                    pipe.display();
-                    log("Пользователь нашёл по фильтру 'Объеденённый' трубу c ID: " + to_string(pipe.id));
+        cout << "Все найденные трубы обновлены." << endl;
+        log("Пользователь обновил статус 'в ремонте' у всех найденных труб.");
+    } else {
+        while (getline(ss, idStr, ',')) {
+            try {
+                int id = stoi(idStr); 
+                ids.push_back(id);
+            } catch (const invalid_argument &) {
+                cout << "Ошибка: не является допустимым целым числом. Попробуйте снова." << endl;
+                return;
+            } catch (const out_of_range &) {
+                cout << "Ошибка: значение выходит за пределы допустимого диапазона." << endl;
+                return;
+            }
+        }
+
+        bool edited = false;
+        for (int id : ids) {
+            if (find(foundIds.begin(), foundIds.end(), id) != foundIds.end()) {
+                auto it = pipes.find(id); 
+                if (it != pipes.end()) { 
+                    toggleRepair(it->second, id); 
+                    edited = true;
+                }
+            } else {
+                nonExistentIds.push_back(id); 
+            }
+        }
+
+        if (edited) {
+            cout << "Статус труб обновлен." << endl;
+        }
+
+        if (!nonExistentIds.empty()) {
+            cout << "Труб(/ы) с ID: ";
+            for (size_t i = 0; i < nonExistentIds.size(); ++i) {
+                cout << nonExistentIds[i];
+                if (i < nonExistentIds.size() - 1) {
+                    cout << ", ";
                 }
             }
-            
+            cout << " не существу(ет/ют)." << endl;
+        }
+    }
+}
+
+    void deletePipesFound(const vector<int>& foundIds) {
+        cout << "Введите ID труб для удаления, разделяя запятыми (или * для удаления всех найденных труб): ";
+        string input;
+        getline(cin, input);
+
+        if (input == "*") {
+            for (int id : foundIds) {
+                pipes.erase(id);
+                cout << "Труба с ID " << id << " удалена." << endl;
+                log("Удалена труба с ID: " + to_string(id));
+            }
+            cout << "Все найденные трубы удалены." << endl;
+            log("Пользователь удалил все найденные трубы.");
+            return;
+        }
+
+        stringstream ss(input);
+        string idStr;
+        vector<int> ids;
+        vector<int> nonExistentIds;
+
+        while (getline(ss, idStr, ',')) {
+            try {
+                int id = stoi(idStr);
+                if (find(foundIds.begin(), foundIds.end(), id) != foundIds.end()) {
+                    ids.push_back(id);
+                } else {
+                    nonExistentIds.push_back(id);
+                }
+            } catch (const invalid_argument&) {
+                cout << "Ошибка: '" << idStr << "' не является допустимым целым числом. Попробуйте снова." << endl;
+                log("Ошибка: '" + idStr + "' не является допустимым целым числом.");
+                return;
+            } catch (const out_of_range&) {
+                cout << "Ошибка: Значение '" << idStr << "' выходит за пределы допустимого диапазона." << endl;
+                log("Ошибка: Значение '" + idStr + "' выходит за пределы допустимого диапазона.");
+                return;
+            }
+        }
+
+        for (int id : ids) {
+            auto it = pipes.find(id); 
+            if (it != pipes.end()) {
+                pipes.erase(it); 
+                cout << "Труба с ID " << id << " удалена." << endl;
+                log("Удалена труба с ID: " + to_string(id));
+            }
+        }
+
+        if (!nonExistentIds.empty()) {
+            cout << "Труб(/ы) с ID: ";
+            for (size_t i = 0; i < nonExistentIds.size(); ++i) {
+                cout << nonExistentIds[i];
+                if (i < nonExistentIds.size() - 1) {
+                    cout << ", ";
+                }
+            }
+            cout << " не существу(ет/ют)." << endl;
         }
     }
 
-    void searchPipesName(){
+    void displayPipeMenuFound() {
+            cout << "-----------------------------" << endl;
+            cout << "|         Меню списка:      |" << endl;
+            cout << "| 1. Удалить трубы          |" << endl;
+            cout << "| 2. Редактировать трубы    |" << endl;
+            cout << "| 0. Назад                  |" << endl;
+            cout << "-----------------------------" << endl;
+        }
+
+    void handleFoundPipeMenu(const vector<int>& foundPipeIds) {
+        int choice;
+        while (true) {
+            displayPipeMenuFound();
+            choice = inputIntInRange("Выберете действие: ", 0, 2);
+            log("Пользователь выбрал действие: " + to_string(choice));
+
+            cout << "-----------------------------" << endl;
+
+            switch (choice) {
+                case 1:
+                    deletePipesFound(foundPipeIds); 
+                    break;
+                case 2:
+                    editPipesFound(foundPipeIds); 
+                    break;
+                case 0:
+                    log("Пользователь перешёл в 'Фильтрация труб'");
+                    return;
+                default:
+                    cout << "Неверный выбор, попробуйте снова." << endl;
+                    log("Некорректный выбор: " + choice);
+                    break;
+            }
+        }
+    }
+
+    void searchPipesName() {
         string searchName;
         log("Пользователь запустил поиск труб по фильтру 'Имя'.");
         cout << "-----------------------------" << endl;
         cout << "Введите название трубы для поиска: ";
         cin >> searchName;
+        cin.ignore();
         log("Поиск труб 'Имя': Введено имя:" + searchName);
 
         if (pipes.empty()) {
             cout << "-----------------------------" << endl;
             cout << "По данному запросу ничего не найдено" << endl;
             log("Пользователь ничего не нашёл по данному фильтру.");
-        }
-        else {
+        } else {
             cout << "-----------------------------" << endl;
             cout << "Результаты поиска труб:\n";
+            vector<int> foundPipeIds; 
+            bool found = false;
+
             for (const auto& pipe : pipes) {
-                if (pipe.name == searchName) {
-                    pipe.display();
-                    log("Пользователь нашёл по фильтру 'Имя' трубу с ID: " + to_string(pipe.id));
+                if (pipe.second.full_name.find(searchName) != string::npos) {
+                    cout << "ID " << pipe.first;
+                    pipe.second.display();
+                    log("Пользователь нашёл по фильтру 'Имя' трубу с ID: " + to_string(pipe.first));
+                    foundPipeIds.push_back(pipe.first); 
+                    found = true;
                 }
             }
-            
+            if (!found) {
+                cout << "-----------------------------" << endl;
+                cout << "По данному запросу ничего не найдено" << endl;
+                log("Пользователь ничего не нашёл по данному фильтру.");
+                return;
+            }
+            else{
+                handleFoundPipeMenu(foundPipeIds);
+            }
         }
-    
     }
 
-    void searchPipesRepair(){
-        bool repairStatus;
-        log("Пользователь запустил поиск труб по фильтру 'Статус ремонта'.");
+    void searchPipesRepair() {
+    bool repairStatus;
+    log("Пользователь запустил поиск труб по фильтру 'Статус ремонта'.");
+    cout << "-----------------------------" << endl;
+    cout << "Поиск труб 'в ремонте'? (1 - да, 0 - нет):";
+    repairStatus = inputIntInRange(" ", 0, 1);
+    log("Поиск труб 'Статус ремонта': Введён статус (1 - да, 0 - нет):" + to_string(repairStatus));
+
+    if (pipes.empty()) {
         cout << "-----------------------------" << endl;
-        cout << "Поиск труб 'в ремонте'? (1 - да, 0 - нет): ";
-        cin >> repairStatus;
-        log("Поиск труб 'Объеденённый': Введён статус (1 - да, 0 - нет):" + to_string(repairStatus));
-        if (pipes.empty()) {
-            cout << "-----------------------------" << endl;
-            cout << "По данному запросу ничего не найдено" << endl;
-            log("Пользователь ничего не нашёл по данному фильтру.");
-        }
-        else {
-            cout << "-----------------------------" << endl;
-            cout << "Результаты поиска труб:\n";
-            for (const auto& pipe : pipes) {
-                if (pipe.underRepair == repairStatus) {
-                    pipe.display();
-                    log("Пользователь нашёл по фильтру 'Статус ремонта' трубу с ID: " + to_string(pipe.id));
-                }
-            }
+        cout << "По данному запросу ничего не найдено" << endl;
+        log("Пользователь ничего не нашёл по данному фильтру.");
+        return;
+    }
+
+    cout << "-----------------------------" << endl;
+    cout << "Результаты поиска труб:\n";
+    
+    vector<int> foundPipeIds;
+    
+    for (const auto& pipe : pipes) {
+        if (pipe.second.underRepair == repairStatus) {
+            cout << "ID " << pipe.first;
+            pipe.second.display();
+            log("Пользователь нашёл по фильтру 'Статус ремонта' трубу с ID: " + to_string(pipe.first));
+            foundPipeIds.push_back(pipe.first); 
             
         }
     }
+    handleFoundPipeMenu(foundPipeIds);
+    if (foundPipeIds.empty()) {
+        cout << "-----------------------------" << endl;
+        cout << "По данному запросу ничего не найдено" << endl;
+        log("Пользователь ничего не нашёл по данному фильтру.");
+        return;
+    }
+}
 
     void searchPipeMenu() {
         cout << "-----------------------------" << endl;
         cout << "|            Меню:          |" << endl;
         cout << "| 1. Искать по имени        |" << endl;
         cout << "| 2. Искать по статусу      |" << endl;
-        cout << "| 3. Объеденённый поиск     |" << endl;
         cout << "| 0. Назад                  |" << endl;
         cout << "-----------------------------" << endl;
     }
 
     void searchPipeSwitch() {
-        int choice; 
-        string wrong;
+        if (pipes.empty()) {
+            cout << "Список труб пуст. Поиск невозможен." << endl;
+            return; 
+        }
+        int choice;
         while (true) {
             searchPipeMenu();
-            cout << "Выберите действие: ";
-            cin >> choice;
-            log("Пользователь в меню 'Фильрация труб' ввел действие : " + to_string(choice));
-            getline(cin, wrong);
-
-            if (cin.fail() || choice < 0 || choice > 3) {
-                cout << "Неверный ввод. Пожалуйста, введите целое число от 0 до 3" << endl;
-                log("Ошибка ввода пользовалетя");
-                cin.clear(); 
-                cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
-                continue; 
-            }
+            choice = inputIntInRange("Выберете действие: ", 0, 5);
+            log("Пользователь выбрал действие: " + to_string(choice));
 
             cout << "-----------------------------" << endl;
 
@@ -527,12 +654,13 @@ struct PipeManager {
             case 2:
                 searchPipesRepair();
                 break;
-            case 3:
-                searchPipesTogether();
-                break;
             case 0:
                 PipeSwitch();
                 log("Пользователь перешёл в меню 'Управление трубами'");
+            default:
+                cout << "Неверный выбор, попробуйте снова." << endl;
+                log("Некорректный выбор: " + choice);
+                break;
             }
         }
     }
@@ -549,24 +677,13 @@ struct PipeManager {
         cout << "-----------------------------" << endl;
     }
 
-    void PipeSwitch(){
+    void PipeSwitch() {
         void runProgram();
-        int choice; 
-        string wrong;
+        int choice;
         while (true) {
             displayPipeMenu();
-            cout << "Выберите действие: ";
-            cin >> choice;
-            log("Пользователь в меню 'Управление трубами' ввел действие : " + to_string(choice));
-            getline(cin, wrong);
-
-            if (cin.fail() || choice < 0 || choice > 5) {
-                cout << "Неверный ввод. Пожалуйста, введите целое число от 0 до 5." << endl;
-                log("Ошибка ввода пользовалетя");
-                cin.clear(); 
-                cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
-                continue; 
-            }
+            choice = inputIntInRange("Выберете действие: ", 0, 5);
+            log("Пользователь выбрал действие: " + to_string(choice));
 
             cout << "-----------------------------" << endl;
 
@@ -590,35 +707,89 @@ struct PipeManager {
             case 0:
                 log("Пользователь перешёл в 'Основное меню'");
                 runProgram();
+            default:
+                cout << "Неверный выбор, попробуйте снова." << endl;
+                log("Некорректный выбор: " + choice);
+                break;
             }
         }
     }
 };
 
-struct CompressorStationManager {
+class CompressorStationManager {
+private:
     int nextId = 1;
-    int id;
+
+public:
     
+    string saveCS(const CompressorStation &stations) const {
+        return stations.full_name + ";" + to_string(stations.totalShops) + ";" + 
+               to_string(stations.operationalShops) + ";" + 
+               to_string(stations.unusedOperationalShops) + ";" + 
+               to_string(stations.efficiency);
+    }
+
+    void toggleShop(CompressorStation &stations, int id) {
+        if (stations.full_name.empty() && stations.totalShops <= 0 && stations.operationalShops <= 0) {
+            cout << "КС нет. Запуск/Остановка цеха невозможна." << endl;
+        }
+        else {
+            int choice;
+            cout << "-----------------------------" << endl;
+            cout << "| 1. Запустить новый цех    |" << endl;
+            cout << "| 2. Остановить работу цеха |" << endl;
+            cout << "-----------------------------" << endl;
+            choice = inputIntInRange("Выберете действие: ", 1, 3);
+            cin.ignore();
+            log("Пользователь выбрал действие: " + choice);
+
+            cout << "-----------------------------" << endl;
+
+            switch (choice) {
+                case 1: 
+                    log("Пользователь выбрал запуск цеха");
+                    if (stations.operationalShops < stations.totalShops) {
+                        stations.operationalShops++;
+                        stations.unusedOperationalShops = ((stations.totalShops - stations.operationalShops) / static_cast<double>(stations.totalShops)) * 100;
+                        cout << "Запустили новый цех. Теперь в работе: " << stations.operationalShops << endl;
+                    } else {
+                        cout << "Все цехи уже запущены." << endl;
+                    }
+                    break;
+                case 2: 
+                    log("Пользователь выбрал остановку цеха");
+                    if (stations.operationalShops > 0) {
+                        stations.operationalShops--;
+                        stations.unusedOperationalShops = ((stations.totalShops - stations.operationalShops) / static_cast<double>(stations.totalShops)) * 100;
+                        cout << "Остановили цех. Теперь в работе: " << stations.operationalShops << endl;
+                    } else {
+                        cout << "Нет работающих цехов для остановки." << endl;
+                        
+                    }
+                    break;
+                default:
+                    cout << "Некорректный выбор. Попробуйте снова." << endl;
+                    
+                    break;
+            }
+            
+        }
+    }
+
     void addStation() {
         CompressorStation station;
-        while (true) {
-            bool idExists = false;
-            for (const auto& station : stations) {
-                if (station.id == nextId) {
-                    idExists = true;
-                    break;
-                }
-            }
-            if (!idExists) {
-                break; 
-            }
-            nextId++; 
+
+        while (stations.find(nextId) != stations.end()) {
+            nextId++;
         }
-        station.id = nextId++; 
+
         station.read();
-        stations.push_back(station);
+        stations[nextId] = station;
+
         cout << "Компрессорная станция добавлена." << endl;
-        log("Компрессорная станция добавлена в систему. ID: " + to_string(station.id));
+        log("Компрессорная станция добавлена в систему. ID: " + to_string(nextId));
+
+        nextId++;
     }
 
     void displayStations() const {
@@ -629,67 +800,60 @@ struct CompressorStationManager {
         cout << "Список компрессорных станций:" << endl;
         cout << endl;
         for (const auto& station : stations) {
-            station.display();
+            cout << "ID " <<station.first;
+            station.second.display();
         }
         cout << endl;
         log("Пользователь запросил список компрессорных станций.");
     }
 
     void removeStation() {
+        if (stations.empty()) {
+            cout << "Список КС пуст. Удаление невозможно." << endl;
+            return; 
+        }
         cout << "Введите ID КС для удаления: ";
-        cin >> id;
-        if (id <= 0 || id > stations.size()) {
+        string command;
+        long id;
+        getline(cin, command);
+        id = numberOrDefault(command);
+        if (id == -1){
+            cout << "Неверный ввод. Повторите попытку!" << endl;
+            return;
+        }
+
+        auto it = stations.find(id);
+        if (it == stations.end()) {
             cout << "Ошибка! Станции с таким ID не существует." << endl;
             return;
         }
-        stations.erase(stations.begin() + id - 1);
+
+        stations.erase(it);
         cout << "Компрессорная станция была удалена." << endl;
     }
 
     void editStation() {
-        cout << "Введите ID КС для редактирования: ";
-        cin >> id;
-        for (auto &station : stations) {
-            if (station.id == id) {
-                cout << "Редактирование КС с ID " << id << endl;
-                station.toggleShop();
-                log("Пользователь обновил статус трубы с ID: " + to_string(station.id));
-                return;
-            }
-        }
-        cout << "КС с ID " << id << " не найдена." << endl;
-    }
-
-    void searchStationTogether() {
-        string searchName;
-        double unusedOperationalShopsCheck;
-        int aroundUnusedOperationalShops;
-        log("Пользователь запустил поиск КС по фильтру 'Объеденённый'.");
-        cout << "-----------------------------" << endl;
-        cout << "Введите название КС для поиска: ";
-        cin >> searchName;
-        log("Поиск КС 'Объеденённый': Введено имя:" + searchName);
-
-        cout << "-----------------------------" << endl;
-        cout << "Введите процент незадействованных цехов: ";
-        cin >> unusedOperationalShopsCheck;
-        log("Поиск труб 'Объеденённый': Введён процент незадействованных цехов:" + to_string(unusedOperationalShopsCheck));
         if (stations.empty()) {
-            cout << "-----------------------------" << endl;
-            cout << "По данному запросу ничего не найдено" << endl;
-            log("Пользователь ничего не нашёл по данному фильтру.");
+            cout << "Список КС пуст. Редактирование невозможно." << endl;
+            return; 
         }
-        else {
-            cout << "-----------------------------" << endl;
-            cout << "Результаты поиска труб:\n";
-            for (const auto& station : stations) {
-                aroundUnusedOperationalShops = station.unusedOperationalShops;
-                if (station.name == searchName && (station.unusedOperationalShops == unusedOperationalShopsCheck || aroundUnusedOperationalShops == unusedOperationalShopsCheck)) {
-                    station.display();
-                    log("Пользователь нашёл по фильтру 'Объеденённый' КС с ID: " + to_string(station.id));
-                }
-            }
-            
+        cout << "Введите ID КС для редактирования: ";
+        string command;
+        long id;
+        getline(cin, command);
+        id = numberOrDefault(command);
+        if (id == -1){
+            cout << "Неверный ввод. Повторите попытку!" << endl;
+            return;
+        }
+
+        auto it = stations.find(id);
+        if (it != stations.end()) {
+            cout << "Редактирование КС с ID " << id << endl;
+            toggleShop(it->second,it->first); 
+            log("Пользователь обновил статус цеха на КС с ID: " + to_string(id));
+        } else {
+            cout << "КС с ID " << id << " не найдена." << endl;
         }
     }
 
@@ -699,51 +863,98 @@ struct CompressorStationManager {
         cout << "-----------------------------" << endl;
         cout << "Введите название КС для поиска: ";
         cin >> searchName;
+        cin.ignore();
         log("Поиск КС 'Имя': Введено имя:" + searchName);
 
         if (stations.empty()) {
             cout << "-----------------------------" << endl;
             cout << "По данному запросу ничего не найдено" << endl;
             log("Пользователь ничего не нашёл по данному фильтру.");
-        }
-        else {
+        } else {
             cout << "-----------------------------" << endl;
             cout << "Результаты поиска КС:\n";
+            bool found = false; 
             for (const auto& station : stations) {
-                if (station.name == searchName) {
-                    station.display();
-                    log("Пользователь нашёл по фильтру 'Имя' КС с ID: " + to_string(station.id));
+                if (station.second.full_name.find(searchName) != string::npos) {
+                    cout << "ID " << station.first;
+                    station.second.display();
+                    log("Пользователь нашёл по фильтру 'Имя' КС с ID: " + to_string(station.first));
+                    found = true;
                 }
             }
-            
+
+            if (!found) { 
+                cout << "-----------------------------" << endl;
+                cout << "По данному запросу ничего не найдено" << endl;
+                log("Пользователь ничего не нашёл по данному фильтру.");
+            }
         }
-    
     }
 
-    void searchStationUnused(){
+    void searchStationUnused() {
         double unusedOperationalShopsCheck;
-        int aroundUnusedOperationalShops;
+        long aroundUnusedOperationalShops;
+        string command;
         log("Пользователь запустил поиск КС по фильтру 'Незадействованные цехи'.");
         cout << "-----------------------------" << endl;
         cout << "Введите процент незадействованных цехов: ";
-        cin >> unusedOperationalShopsCheck;
-        log("Поиск КС 'Незадействованные цехи': Введён процент:" + to_string(unusedOperationalShopsCheck));
+        getline(cin, command);
+        aroundUnusedOperationalShops = numberOrDefault(command);
+        if (aroundUnusedOperationalShops == -1){
+            cout << "Неверный ввод. Повторите попытку!" << endl;
+            return;
+        }
+
+        log("Поиск КС 'Незадействованные цехи': Введён процент: " + to_string(unusedOperationalShopsCheck));
+
+
+        cout << "-----------------------------" << endl;
+        cout << "|              Меню:            |" << endl;
+        cout << "| 1. Равно введённому проценту  |" << endl;
+        cout << "| 2. Больше введённого процента |" << endl;
+        cout << "| 3. Меньше введённого процента |" << endl;
+        cout << "-----------------------------" << endl;
+        int choice;
+        choice = inputIntInRange("Выберете действие: ", 1, 3);
+        log("Пользователь выбрал действие: " + to_string(choice));
+
         if (stations.empty()) {
             cout << "-----------------------------" << endl;
             cout << "По данному запросу ничего не найдено" << endl;
             log("Пользователь ничего не нашёл по данному фильтру.");
+            return;
         }
-        else {
-            cout << "-----------------------------" << endl;
-            cout << "Результаты поиска КС:\n";
-            for (const auto& station : stations) {
-                aroundUnusedOperationalShops = station.unusedOperationalShops;
-                if (station.unusedOperationalShops == unusedOperationalShopsCheck || aroundUnusedOperationalShops == unusedOperationalShopsCheck) {
-                    station.display();
-                    log("Пользователь нашёл по фильтру 'Незадействованные цехи' КС с ID: " + to_string(station.id));
-                }
-            }
+
+        cout << "-----------------------------" << endl;
+        cout << "Результаты поиска КС:\n";
+
+        for (const auto& station : stations) {
+            aroundUnusedOperationalShops = station.second.unusedOperationalShops;
             
+            bool conditionMet = false;
+            switch (choice) {
+                case 1: 
+                    conditionMet = (aroundUnusedOperationalShops == unusedOperationalShopsCheck);
+                    log("Пользователь выбрал параметр: Равно введённому проценту");
+                    break;
+                case 2: 
+                    conditionMet = (aroundUnusedOperationalShops > unusedOperationalShopsCheck);
+                    log("Пользователь выбрал параметр: Больше введённого процента");
+                    break;
+                case 3: 
+                    conditionMet = (aroundUnusedOperationalShops < unusedOperationalShopsCheck);
+                    log("Пользователь выбрал параметр: Меньше введённого процента");
+                    break;
+                default:
+                    cout << "Некорректный выбор!" << endl;
+                    return; 
+            }
+
+            if (conditionMet) {
+                cout << "ID " << station.first;
+                station.second.display(); 
+                log("Пользователь нашёл по фильтру 'Незадействованные цехи' КС с ID: " + to_string(station.first));
+            }
         }
     }
 
@@ -753,31 +964,22 @@ struct CompressorStationManager {
         cout << "| 1. Искать по имени        |" << endl;
         cout << "| 2. Искать по проценту     |" << endl;
         cout << "|    незадействованных цехов|" << endl;
-        cout << "| 3. Объеденённый поиск     |" << endl;
         cout << "| 0. Назад                  |" << endl;
         cout << "-----------------------------" << endl;
     }
 
     void searchStationSwitch() {
-        int choice; 
-        string wrong;
+        if (stations.empty()) {
+            cout << "Список КС пуст. Поиск невозможен." << endl;
+            return; 
+        }
+        int choice;
         while (true) {
             searchStationMenu();
-            cout << "Выберите действие: ";
-            cin >> choice;
-            log("Пользователь в меню 'Фильрация КС' ввел действие : " + to_string(choice));
-            getline(cin, wrong);
-
-            if (cin.fail() || choice < 0 || choice > 3) {
-                cout << "Неверный ввод. Пожалуйста, введите целое число от 0 до 3" << endl;
-                log("Ошибка ввода пользовалетя");
-                cin.clear(); 
-                cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
-                continue; 
-            }
-
+            choice = inputIntInRange("Выберете действие: ", 0, 2);
+            log("Пользователь выбрал действие: " + to_string(choice));
             cout << "-----------------------------" << endl;
-
+            
             switch (choice) {
             case 1:
                 searchStationName();
@@ -785,12 +987,13 @@ struct CompressorStationManager {
             case 2:
                 searchStationUnused();
                 break;
-            case 3:
-                searchStationTogether();
-                break;
             case 0:
                 CompressorStationSwitch();
                 log("Пользователь перешёл в меню 'Управление КС'");
+            default:
+                cout << "Неверный выбор, попробуйте снова." << endl;
+                log("Некорректный выбор: " + choice);
+                break;
             }
         }
     }
@@ -808,25 +1011,14 @@ struct CompressorStationManager {
         
     }
 
-    void CompressorStationSwitch(){
+    void CompressorStationSwitch() {
         void runProgram();
-        int choice; 
-        string wrong;
+        int choice;
+
         while (true) {
             displayCompressorStationMenu();
-            cout << "Выберите действие: ";
-            cin >> choice;
-            log("Пользователь в меню 'Управление КС' ввел действие : " + to_string(choice));
-            getline(cin, wrong);
-
-            if (cin.fail() || choice < 0 || choice > 5) {
-                cout << "Неверный ввод. Пожалуйста, введите целое число от 0 до 5." << endl;
-                log("Ошибка ввода пользовалетя");
-                cin.clear(); 
-                cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
-                continue; 
-            }
-
+            choice = inputIntInRange("Выберете действие: ", 0, 5);
+            log("Пользователь выбрал действие: " + to_string(choice));
             cout << "-----------------------------" << endl;
 
             switch (choice) {
@@ -849,24 +1041,29 @@ struct CompressorStationManager {
             case 0:
                 log("Пользователь перешёл в 'Основное меню'");
                 runProgram();
+            default:
+                cout << "Неверный выбор, попробуйте снова." << endl;
+                log("Некорректный выбор: " + choice);
+                break;
             }
         }
     }
 };
 
-void saveToFile() {
+void saveToFile(const map<int, Pipe>& pipes, const map<int, CompressorStation>& stations, CompressorStationManager& cmanager, PipeManager& pmanager) {
     string filename;
     cout << "Введите имя файла для сохранения компрессорных станций и труб: ";
     cin >> filename;
     ofstream ofs(filename + ".txt");
     log("Начата операция сохранения в файл: " + filename + ".txt");
+    
     if (ofs) {
-        for (size_t i = 0; i < stations.size(); ++i) {
-            ofs << "KS " << i + 1 << ": " << stations[i].save() << endl; 
+        for (const auto& station : stations) {
+            ofs << "KS " << station.first << ": " << cmanager.saveCS(station.second) << endl;
         }
 
-        for (size_t i = 0; i < pipes.size(); ++i) {
-            ofs << "pipe " << i + 1 << ": " << pipes[i].save() << endl;
+        for (const auto& pipe : pipes) {
+            ofs << "pipe " << pipe.first << ": " << pmanager.savePipe(pipe.second) << endl;
         }
 
         ofs.close();
@@ -878,63 +1075,57 @@ void saveToFile() {
     }
 }
 
-void loadFromFile() {
+void loadFromFile(map<int, Pipe>& pipes, map<int, CompressorStation>& stations) {
     string filename;
     cout << "Введите имя файла для загрузки компрессорных станций и труб: ";
     cin >> filename;
+    cin.ignore();
     log("Попытка загрузки данных из файла: " + filename + ".txt");
-    
+
     ifstream ifs(filename + ".txt");
     if (ifs) {
         string line;
         while (getline(ifs, line)) {
             try {
                 if (line.substr(0, 2) == "KS") {
-                    CompressorStation station;
-                    station.load(line.substr(3));
+                    size_t pos = line.find(':');
+                    if (pos == string::npos) throw runtime_error("Неверный формат строки для компрессорной станции");
 
-                    bool exists = false;
-                    for (const auto& s : stations) {
-                        if (s.id == station.id) {
-                            exists = true;
-                            break;
-                        }
-                    }
-                    if (!exists) {
-                        stations.push_back(station);
-                        log("Загружена компрессорная станция с ID: " + to_string(station.id));
+                    int stationKey = stoi(line.substr(3, pos - 3)); 
+                    CompressorStation station;
+                    station.load(line.substr(pos + 1)); 
+                    
+                    if (stations.find(stationKey) == stations.end()) {
+                        stations[stationKey] = station;
+                        log("Загружена компрессорная станция с ID: " + to_string(stationKey));
                     } else {
-                        cerr << "Компрессорная станция с ID " << station.id << " уже существует." << endl;
-                        log("Ошибка: Компрессорная станция с ID " + to_string(station.id) + " уже существует.");
+                        cerr << "Компрессорная станция с ID " << stationKey << " уже существует." << endl;
+                        log("Ошибка: Компрессорная станция с ID " + to_string(stationKey) + " уже существует.");
                     }
                 } else if (line.substr(0, 4) == "pipe") {
-                    Pipe pipe;
-                    pipe.load(line.substr(5));
 
-                    bool exists = false;
-                    for (const auto& p : pipes) {
-                        if (p.id == pipe.id) {
-                            exists = true;
-                            break;
-                        }
-                    }
-                    if (!exists) {
-                        pipes.push_back(pipe);
-                        log("Загружена труба с ID: " + to_string(pipe.id));
+                    size_t pos = line.find(':');
+                    if (pos == string::npos) throw runtime_error("Неверный формат строки для трубы");
+
+                    int pipeKey = stoi(line.substr(5, pos - 5)); 
+                    Pipe pipe;
+                    pipe.load(line.substr(pos + 1)); 
+
+                    if (pipes.find(pipeKey) == pipes.end()) {
+                        pipes[pipeKey] = pipe;
+                        log("Загружена труба с ID: " + to_string(pipeKey));
                     } else {
-                        cerr << "Труба с ID " << pipe.id << " уже существует." << endl;
-                        log("Ошибка: Труба с ID " + to_string(pipe.id) + " уже существует.");
+                        cerr << "Труба с ID " << pipeKey << " уже существует." << endl;
+                        log("Ошибка: Труба с ID " + to_string(pipeKey) + " уже существует.");
                     }
                 }
             } catch (const exception& e) {
-                cerr << "Ошибка при загрузке строки: " << line << " -> " << e.what() << endl;
-                log("Ошибка при загрузке строки '" + line + "': " + e.what());
+                cerr << "Ошибка при загрузке: " << e.what() << endl;
             }
         }
-        log("Загрузка данных завершена.");
+        ifs.close();
     } else {
         cerr << "Не удалось открыть файл: " << filename << ".txt" << endl;
-        log("Ошибка: Не удалось открыть файл " + filename + ".txt");
     }
 }
 
@@ -951,44 +1142,34 @@ void displayMenu() {
 }
 
 void runProgram() {
-    PipeManager pmanager;
-    CompressorStationManager cmanager;
+    PipeManager pManager; 
+    CompressorStationManager sManager;
     int choice;
-    string wrong;
 
     while (true) {
         displayMenu();
-        cout << "Выберите действие: ";
-        cin >> choice;
+        choice = inputIntInRange("Выберете действие: ", 0, 5);
         log("Пользователь выбрал действие: " + to_string(choice));
-        getline(cin, wrong);
-
-        if (cin.fail() || choice < 0 || choice > 5) {
-            cout << "Неверный ввод. Пожалуйста, введите целое число от 0 до 7." << endl;
-            cin.clear();
-            cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            continue;
-        }
 
         cout << "-----------------------------" << endl;
 
         switch (choice) {
             case 1:
-                pmanager.PipeSwitch();
+                pManager.PipeSwitch();
                 break;
             case 2:
-                cmanager.CompressorStationSwitch();
+                sManager.CompressorStationSwitch();
                 break;
             case 3:
-                pmanager.displayAllPipes();
-                cmanager.displayStations();
+                pManager.displayAllPipes();
+                sManager.displayStations();
                 log("Отображение всех труб и станций выполнено.");
                 break;
             case 4:
-                saveToFile();
+                saveToFile(pipes,stations,sManager,pManager);
                 break;
             case 5:
-                loadFromFile();
+                loadFromFile(pipes, stations);
                 break;
             case 0:
                 cout << "Выход из программы." << endl;
@@ -996,7 +1177,7 @@ void runProgram() {
                 exit( 1 );
             default:
                 cout << "Неверный выбор, попробуйте снова." << endl;
-                log("Некорректный выбор: " + to_string(choice));
+                log("Некорректный выбор: " + choice);
                 break;
         }
     }
