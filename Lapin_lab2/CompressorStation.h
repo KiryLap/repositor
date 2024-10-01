@@ -7,6 +7,8 @@
 
 using namespace std;
 
+class CompressorStationManager;
+
 class CompressorStation {
 public:
     string full_name; 
@@ -18,6 +20,7 @@ public:
     void read();
     void display() const;
     void load(const string &data);
+    friend class CompressorStationManager;
 };
 
 #endif 
