@@ -14,12 +14,13 @@ using namespace std;
 
 map<int, Pipe> pipes;
 map<int, CompressorStation> stations;
+map<int, Connection> connections; 
 
 void setupLocale() {
     setlocale(LC_ALL, "ru_RU.UTF-8");
 }
 
-void saveToFile(const map<int, Pipe>& pipes, const map<int, CompressorStation>& stations, CompressorStationManager& cmanager, PipeManager& pmanager) {
+void saveToFile(const map<int, Pipe>& pipes, const map<int, CompressorStation>& stations, CompressorStationManager& cmanager, PipeManager& pmanager, GasTransportNetwork& gasNetwork) {
     string filename;
     cout << "Введите имя файла для сохранения компрессорных станций и труб: ";
     cin >> filename;
@@ -36,8 +37,10 @@ void saveToFile(const map<int, Pipe>& pipes, const map<int, CompressorStation>& 
             ofs << "pipe " << pipe.first << ": " << pmanager.savePipe(pipe.second) << endl;
         }
 
+        ofs << gasNetwork.saveConnections() << endl;
+
         ofs.close();
-        cout << "Данные компрессорных станций и труб сохранены в " << filename << ".txt" << endl;
+        cout << "Данные компрессорных станций, труб и соединений сохранены в " << filename << ".txt" << endl;
         log("Успешно сохранено в файл: " + filename + ".txt");
     } else {
         cerr << "Ошибка открытия файла для сохранения." << endl;
@@ -45,9 +48,9 @@ void saveToFile(const map<int, Pipe>& pipes, const map<int, CompressorStation>& 
     }
 }
 
-void loadFromFile(map<int, Pipe>& pipes, map<int, CompressorStation>& stations) {
+void loadFromFile(map<int, Pipe>& pipes, map<int, CompressorStation>& stations, map<int, Connection>& connections) {
     string filename;
-    cout << "Введите имя файла для загрузки компрессорных станций и труб: ";
+    cout << "Введите имя файла для загрузки компрессорных станций, труб и соединений: ";
     cin >> filename;
     cin.ignore();
     log("Попытка загрузки данных из файла: " + filename + ".txt");
@@ -72,8 +75,8 @@ void loadFromFile(map<int, Pipe>& pipes, map<int, CompressorStation>& stations) 
                         cerr << "Компрессорная станция с ID " << stationKey << " уже существует." << endl;
                         log("Ошибка: Компрессорная станция с ID " + to_string(stationKey) + " уже существует.");
                     }
-                } else if (line.substr(0, 4) == "pipe") {
-
+                } 
+                else if (line.substr(0, 4) == "pipe") {
                     size_t pos = line.find(':');
                     if (pos == string::npos) throw runtime_error("Неверный формат строки для трубы");
 
@@ -88,6 +91,38 @@ void loadFromFile(map<int, Pipe>& pipes, map<int, CompressorStation>& stations) 
                         cerr << "Труба с ID " << pipeKey << " уже существует." << endl;
                         log("Ошибка: Труба с ID " + to_string(pipeKey) + " уже существует.");
                     }
+                } 
+                else if (line.substr(0, 10) == "connection") {
+                    size_t pos = line.find(':');
+                    if (pos == string::npos) throw runtime_error("Неверный формат строки для соединения");
+
+                    int connectionKey = stoi(line.substr(11, pos - 11)); 
+                    string params = line.substr(pos + 1);
+                    replace(params.begin(), params.end(), ',', '.'); 
+                    stringstream ss(params);
+                    string token;
+                    int entryStationId, exitStationId, pipeId, diameter, length;
+
+                    getline(ss, token, ';');
+                    entryStationId = stoi(token);
+                    getline(ss, token, ';');
+                    exitStationId = stoi(token);
+                    getline(ss, token, ';');
+                    pipeId = stoi(token);
+                    getline(ss, token, ';');
+                    diameter = stoi(token);
+                    getline(ss, token);
+                    length = stoi(token);
+
+                    Connection connection(entryStationId, exitStationId, pipeId, diameter, length);
+
+                    if (connections.find(connectionKey) == connections.end()) {
+                        connections[connectionKey] = connection;
+                        log("Загружено соединение с ID: " + to_string(connectionKey));
+                    } else {
+                        cerr << "Соединение с ID " << connectionKey << " уже существует." << endl;
+                        log("Ошибка: Соединение с ID " + to_string(connectionKey) + " уже существует.");
+                    }
                 }
             } catch (const exception& e) {
                 cerr << "Ошибка при загрузке: " << e.what() << endl;
@@ -100,23 +135,25 @@ void loadFromFile(map<int, Pipe>& pipes, map<int, CompressorStation>& stations) 
 }
 
 void runProgram() {
-    PipeManager pManager; 
-    CompressorStationManager sManager;
+    PipeManager pManager(connections);
+    CompressorStationManager sManager(connections);
     GasTransportNetwork gasNetwork;
     int choice;
 
     while (true) {
-        cout << "-----------------------------" << endl;
-        cout << "|            Меню:          |" << endl;
-        cout << "| 1. Трубы                  |" << endl;
-        cout << "| 2. КС                     |" << endl;
-        cout << "| 3. Просмотр всех объектов |" << endl;
-        cout << "| 4. Сохранить              |" << endl;
-        cout << "| 5. Загрузить              |" << endl;
-        cout << "| 6. Соединение КС          |" << endl;
-        cout << "| 0. Выход                  |" << endl;
-        cout << "-----------------------------" << endl;
-        choice = inputIntInRange("Выберете действие: ", 0, 6);
+        cout << "---------------------------------" << endl;
+        cout << "|               Меню:           |" << endl;
+        cout << "| 1. Трубы                      |" << endl;
+        cout << "| 2. КС                         |" << endl;
+        cout << "| 3. Просмотр всех объектов     |" << endl;
+        cout << "| 4. Сохранить данные           |" << endl;
+        cout << "| 5. Загрузить данные           |" << endl;
+        cout << "| 6. Создать соединение КС      |" << endl;
+        cout << "| 7. Удалить соединение КС      |" << endl;
+        cout << "| 8. Топологическая сортировка  |" << endl;
+        cout << "| 0. Выход                      |" << endl;
+        cout << "---------------------------------" << endl;
+        choice = inputIntInRange("Выберете действие: ", 0, 8);
         log("Пользователь выбрал действие: " + to_string(choice));
 
         cout << "-----------------------------" << endl;
@@ -135,13 +172,19 @@ void runProgram() {
                 log("Отображение всех труб и станций выполнено.");
                 break;
             case 4:
-                saveToFile(pipes,stations,sManager,pManager);
+                saveToFile(pipes,stations,sManager,pManager,gasNetwork);
                 break;
             case 5:
-                loadFromFile(pipes, stations);
+                loadFromFile(pipes, stations, connections);
                 break;
             case 6:{
-                gasNetwork.connectStations(pipes, stations,pManager);}
+                gasNetwork.connectStations(pipes, stations, pManager);}
+                break;
+            case 7:{
+                gasNetwork.removeConnection();}
+                break;
+            case 8:{
+                gasNetwork.topologicalSort(connections);}
                 break;
             case 0:
                 cout << "Выход из программы." << endl;

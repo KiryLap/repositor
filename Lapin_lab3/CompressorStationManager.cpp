@@ -4,6 +4,7 @@
 #include <string>
 
 extern std::map<int, CompressorStation> stations; 
+
 using namespace std;
 
     string CompressorStationManager::saveCS(const CompressorStation &stations) const {
@@ -63,17 +64,17 @@ using namespace std;
     void CompressorStationManager::addStation() {
         CompressorStation station;
 
-        while (stations.find(nextId) != stations.end()) {
-            nextId++;
+        while (stations.find(nextIdKS) != stations.end()) {
+            nextIdKS++;
         }
 
         station.read();
-        stations[nextId] = station;
+        stations[nextIdKS] = station;
 
         cout << "Компрессорная станция добавлена." << endl;
-        log("Компрессорная станция добавлена в систему. ID: " + to_string(nextId));
+        log("Компрессорная станция добавлена в систему. ID: " + to_string(nextIdKS));
 
-        nextId++;
+        nextIdKS++;
     }
 
     void CompressorStationManager::displayStations() const {
@@ -96,12 +97,9 @@ using namespace std;
             cout << "Список КС пуст. Удаление невозможно." << endl;
             return; 
         }
-        cout << "Введите ID КС для удаления: ";
-        string command;
-        long id;
-        getline(cin, command);
-        id = numberOrDefault(command);
-        if (id == -1){
+        int id;
+        id = readPositive<int>("Введите ID КС для удаления: ", "Введён недопустимый ID.");
+        if (id == -1) {
             cout << "Неверный ввод. Повторите попытку!" << endl;
             return;
         }
@@ -112,8 +110,21 @@ using namespace std;
             return;
         }
 
+        // Удаляем соединения, связанные с данной компрессорной станцией
+        for (auto connIt = connections.begin(); connIt != connections.end(); ) {
+            const Connection &conn = connIt->second;
+            if (conn.entryStationId == id || conn.exitStationId == id) {
+                // Удаляем соединение
+                connIt = connections.erase(connIt);
+                cout << "Удалено соединение с ID трубы: " << conn.pipeId << endl;
+            } else {
+                ++connIt;
+            }
+        }
+
         stations.erase(it);
         cout << "Компрессорная станция была удалена." << endl;
+        log("Компрессорная станция с ID: " + to_string(id) + " была удалена вместе с её соединениями.");
     }
 
     void CompressorStationManager::editStation() {

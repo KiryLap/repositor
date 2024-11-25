@@ -5,13 +5,17 @@
 #include <iostream>
 #include <map>
 #include "CompressorStation.h" 
-#include "utils.h"            
+#include "GasTransportNetwork.h"
+#include "utils.h"
+
 
 class CompressorStationManager {
 private:
-    int nextId = 1;
+    int nextIdKS = 1;
+    map<int, Connection>& connections;
 
 public:
+    CompressorStationManager(map<int, Connection>& connections) : connections(connections) {}
     std::string saveCS(const CompressorStation &station) const;
     void toggleShop(CompressorStation &station, int id);
     void addStation();

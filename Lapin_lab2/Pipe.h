@@ -12,8 +12,8 @@ class PipeManager;
 class Pipe {
 private:
     string full_name; 
-    double length = 0; 
-    double diameter = 0;
+    int length = 0; 
+    int diameter = 0;
     bool underRepair;
 public:
     void read();

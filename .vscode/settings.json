@@ -106,6 +106,9 @@
     "stdexcept": "cpp",
     "streambuf": "cpp",
     "typeinfo": "cpp",
-    "cstdarg": "cpp"
+    "cstdarg": "cpp",
+    "set": "cpp",
+    "queue": "cpp",
+    "stack": "cpp"
   }
 }

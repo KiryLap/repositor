@@ -4,10 +4,9 @@
 #include <iostream>
 #include <map>
 
-
-extern std::map<int, Pipe> pipes; 
-
 using namespace std;
+
+extern map<int, Pipe> pipes;
 
     string PipeManager::savePipe(const Pipe &pipe) const {
             return pipe.full_name + ";" + to_string(pipe.length) + ";" + to_string(pipe.diameter) + ";" + to_string(pipe.underRepair);
@@ -40,170 +39,54 @@ using namespace std;
         nextId++; 
     }
 
-    int PipeManager::addPipeGTN() {
-        Pipe newPipe; 
-        cout << "Создайте трубу с диаметром 500,700,1000 или 1400" << endl;
-        newPipe.read(); 
+    tuple<int, int, int> PipeManager::addPipeGTN() {
+        Pipe newPipe;
+        cout << "Создайте трубу с диаметром 500, 700, 1000 или 1400" << endl;
+        cout << "---------------------------------------------------" << endl;
+
+        newPipe.read();
 
         while (pipes.find(nextId) != pipes.end()) {
             nextId++;
         }
 
-        while (newPipe.diameter != 500.0 && newPipe.diameter != 700.0 && 
-            newPipe.diameter != 1000.0 && newPipe.diameter != 1400.0) {
+        while (newPipe.diameter != 500.0 && newPipe.diameter != 700.0 &&
+               newPipe.diameter != 1000.0 && newPipe.diameter != 1400.0) {
             cout << "Неверный диаметр. Введите снова." << endl;
-            newPipe.read(); 
-            cout << newPipe.diameter << endl;
+            cout << "--------------------------------" << endl;
+
+            if (!pipes.empty()) {
+                auto lastElement = --pipes.end(); 
+                cout << "Удаление трубы с ID: " << lastElement->first << endl;
+                pipes.erase(lastElement); 
+            }
+
+            newPipe.read();
         }
 
         pipes[nextId] = newPipe;
 
         cout << "Труба добавлена. ID: " << nextId << endl;
-        log("Труба добавлена в систему. ID: " + to_string(nextId));
 
-        nextId++; 
+        return make_tuple(nextId, newPipe.diameter, newPipe.length); 
+    }
 
-        return nextId - 1; 
+    void PipeManager::removeConnectionsUsingPipe(int pipeId) {
+        for (auto it = connections.begin(); it != connections.end();) {
+            if (it->second.pipeId == pipeId) {
+                it = connections.erase(it); 
+            } else {
+                ++it; 
+            }
+        }
+        cout << "Соединения, использующие трубу с ID " << pipeId << ", были удалены." << endl;
     }
 
     void PipeManager::editPipes() {
-        if (pipes.empty()) {
-            cout << "Список труб пуст. Редактирование невозможно." << endl;
-            return; 
-        }
-        cout << "Введите ID труб для редактирования, разделяя запятыми (или * для редактирования всех): ";
-        string input;
-        getline(cin, input);
-        stringstream ss(input);
-        string idStr;
-        vector<int> ids;
-        vector<int> nonExistentIds;
-
-        if (input == "*") {
-            for (auto &pipePair : pipes) { 
-                toggleRepair(pipePair.second, pipePair.first); 
-            }
-            cout << "Все трубы обновлены." << endl;
-            log("Пользователь обновил статус 'в ремонте' у всех труб.");
-        } else {
-            while (getline(ss, idStr, ',')) {
-                try {
-                    int id = stoi(idStr); 
-                    ids.push_back(id);
-                } catch (const invalid_argument &) {
-                    cout << "Ошибка: не является допустимым целым числом. Попробуйте снова." << endl;
-                    return;
-                } catch (const out_of_range &) {
-                    cout << "Ошибка: значение выходит за пределы допустимого диапазона." << endl;
-                    return;
-                }
-            }
-
-            bool edited = false;
-            for (int id : ids) {
-                auto it = pipes.find(id); 
-                if (it != pipes.end()) { 
-                    toggleRepair(it->second, id); 
-                    edited = true;
-                } else {
-                    nonExistentIds.push_back(id); 
-                }
-            }
-
-            if (edited) {
-                cout << "Статус труб обновлен." << endl;
-            }
-
-            if (!nonExistentIds.empty()) {
-                cout << "Труб(/ы) с ID: ";
-                for (size_t i = 0; i < nonExistentIds.size(); ++i) {
-                    cout << nonExistentIds[i];
-                    if (i < nonExistentIds.size() - 1) {
-                        cout << ", ";
-                    }
-                }
-                cout << " не существу(ет/ют)." << endl;
-            }
-        }
+    if (pipes.empty()) {
+        cout << "Список труб пуст. Редактирование невозможно." << endl;
+        return; 
     }
-
-    void PipeManager::deletePipes() {
-        if (pipes.empty()) {
-            cout << "Список труб пуст. Удаление невозможно." << endl;
-            return; 
-        }
-        cout << "Введите ID труб для удаления, разделяя запятыми (или * для удаления всех): ";
-        string input;
-        getline(cin, input);
-
-        if (input == "*") {
-            pipes.clear(); 
-            cout << "Все трубы удалены." << endl;
-            log("Пользователь удалил весь список труб.");
-            return;
-        }
-
-        stringstream ss(input);
-        string idStr;
-        vector<int> ids;
-        vector<int> nonExistentIds;
-
-        while (getline(ss, idStr, ',')) {
-            try {
-                int id = stoi(idStr);
-                ids.push_back(id);
-            } catch (const invalid_argument&) {
-                cout << "Ошибка: '" << idStr << "' не является допустимым целым числом. Попробуйте снова." << endl;
-                log("Ошибка: '" + idStr + "' не является допустимым целым числом.");
-                return;
-            } catch (const out_of_range&) {
-                cout << "Ошибка: Значение '" << idStr << "' выходит за пределы допустимого диапазона." << endl;
-                log("Ошибка: Значение '" + idStr + "' выходит за пределы допустимого диапазона.");
-                return;
-            }
-        }
-    
-        for (int id : ids) {
-            auto it = pipes.find(id); 
-
-            if (it != pipes.end()) {
-                pipes.erase(it); 
-                cout << "Труба с ID " << id << " удалена." << endl;
-                log("Удалена труба с ID: " + to_string(id));
-            } else {
-                nonExistentIds.push_back(id); 
-            }
-        }
-
-        if (!nonExistentIds.empty()) {
-            cout << "Труб(/ы) с ID: ";
-            for (size_t i = 0; i < nonExistentIds.size(); ++i) {
-                cout << nonExistentIds[i];
-                if (i < nonExistentIds.size() - 1) {
-                    cout << ", ";
-                }
-            }
-            cout << " не существу(ет/ют)." << endl;
-        }
-    }
-
-    void PipeManager::displayAllPipes() {
-        if (pipes.empty()) {
-            cout << "Нет доступных труб." << endl;
-        } else {
-            cout << "Список всех труб:" << endl;
-            cout << endl;
-            for (const auto &pipe : pipes) {
-                cout << "ID " <<pipe.first;
-                pipe.second.display();
-            }
-            cout << endl;
-        }
-        cout << "-----------------------------" << endl;
-        log("Пользователь запросил список труб.");
-    }
-
-    void PipeManager::editPipesFound(const vector<int>& foundIds) {
     cout << "Введите ID труб для редактирования, разделяя запятыми (или * для редактирования всех): ";
     string input;
     getline(cin, input);
@@ -213,14 +96,14 @@ using namespace std;
     vector<int> nonExistentIds;
 
     if (input == "*") {
-        for (int id : foundIds) {
-            auto it = pipes.find(id); 
-            if (it != pipes.end()) {
-                toggleRepair(it->second, id);
+        for (auto &pipePair : pipes) { 
+            toggleRepair(pipePair.second, pipePair.first); 
+            if (pipePair.second.underRepair) {
+                removeConnectionsUsingPipe(pipePair.first);
             }
         }
-        cout << "Все найденные трубы обновлены." << endl;
-        log("Пользователь обновил статус 'в ремонте' у всех найденных труб.");
+        cout << "Все трубы обновлены." << endl;
+        log("Пользователь обновил статус 'в ремонте' у всех труб.");
     } else {
         while (getline(ss, idStr, ',')) {
             try {
@@ -237,12 +120,13 @@ using namespace std;
 
         bool edited = false;
         for (int id : ids) {
-            if (find(foundIds.begin(), foundIds.end(), id) != foundIds.end()) {
-                auto it = pipes.find(id); 
-                if (it != pipes.end()) { 
-                    toggleRepair(it->second, id); 
-                    edited = true;
+            auto it = pipes.find(id); 
+            if (it != pipes.end()) { 
+                toggleRepair(it->second, id); 
+                if (it->second.underRepair) {
+                    removeConnectionsUsingPipe(id);
                 }
+                edited = true;
             } else {
                 nonExistentIds.push_back(id); 
             }
@@ -265,6 +149,159 @@ using namespace std;
     }
 }
 
+    void PipeManager::deletePipes() {
+    if (pipes.empty()) {
+        cout << "Список труб пуст. Удаление невозможно." << endl;
+        return; 
+    }
+    cout << "Введите ID труб для удаления, разделяя запятыми (или * для удаления всех): ";
+    string input;
+    getline(cin, input);
+
+    if (input == "*") {
+        pipes.clear(); 
+        connections.clear(); 
+        cout << "Все трубы и соединения удалены." << endl;
+        log("Пользователь удалил весь список труб и соединений.");
+        return;
+    }
+
+    stringstream ss(input);
+    string idStr;
+    vector<int> ids;
+    vector<int> nonExistentIds;
+
+    while (getline(ss, idStr, ',')) {
+        try {
+            int id = stoi(idStr);
+            ids.push_back(id);
+        } catch (const invalid_argument&) {
+            cout << "Ошибка: '" << idStr << "' не является допустимым целым числом." << endl;
+            log("Ошибка: '" + idStr + "' не является допустимым целым числом.");
+            return;
+        } catch (const out_of_range&) {
+            cout << "Ошибка: Значение '" << idStr << "' выходит за пределы допустимого диапазона." << endl;
+            log("Ошибка: Значение '" + idStr + "' выходит за пределы допустимого диапазона.");
+            return;
+        }
+    }
+
+    for (int id : ids) {
+        auto it = pipes.find(id); 
+
+        if (it != pipes.end()) {
+            pipes.erase(it); 
+            cout << "Труба с ID " << id << " удалена." << endl;
+            log("Удалена труба с ID: " + to_string(id));
+            
+            for (auto connIt = connections.begin(); connIt != connections.end(); ) {
+                if (connIt->second.pipeId == id) {
+                    connIt = connections.erase(connIt); 
+                } else {
+                    ++connIt; 
+                }
+            }
+        } else {
+            nonExistentIds.push_back(id); 
+        }
+    }
+
+    if (!nonExistentIds.empty()) {
+        cout << "Труб(/ы) с ID: ";
+        for (size_t i = 0; i < nonExistentIds.size(); ++i) {
+            cout << nonExistentIds[i];
+            if (i < nonExistentIds.size() - 1) {
+                cout << ", ";
+            }
+        }
+        cout << " не существу(ет/ют)." << endl;
+    }
+}
+
+    void PipeManager::displayAllPipes() {
+        if (pipes.empty()) {
+            cout << "Нет доступных труб." << endl;
+        } else {
+            cout << "Список всех труб:" << endl;
+            cout << endl;
+            for (const auto &pipe : pipes) {
+                cout << "ID " <<pipe.first;
+                pipe.second.display();
+            }
+            cout << endl;
+        }
+        cout << "-----------------------------" << endl;
+        log("Пользователь запросил список труб.");
+    }
+
+    void PipeManager::editPipesFound(const vector<int> &foundIds) {
+        cout << "Введите ID труб для редактирования, разделяя запятыми (или  для редактирования всех): ";
+        string input;
+        getline(cin, input);
+        stringstream ss(input);
+        string idStr;
+        vector<int> ids;
+        vector<int> nonExistentIds;
+
+        if (input == "") {
+            for (int id : foundIds) {
+                auto it = pipes.find(id); 
+                if (it != pipes.end()) {
+                    toggleRepair(it->second, id);
+                    if (it->second.underRepair) {
+                        removeConnectionsUsingPipe(id); // Удаляем соединения, если труба в ремонте
+                    }
+                }
+            }
+            cout << "Все найденные трубы обновлены." << endl;
+            log("Пользователь обновил статус 'в ремонте' у всех найденных труб.");
+        } else {
+            while (getline(ss, idStr, ',')) {
+                try {
+                    int id = stoi(idStr); 
+                    ids.push_back(id);
+                } catch (const invalid_argument &) {
+                    cout << "Ошибка: не является допустимым целым числом. Попробуйте снова." << endl;
+                    return;
+                } catch (const out_of_range &) {
+                    cout << "Ошибка: значение выходит за пределы допустимого диапазона." << endl;
+                    return;
+                }
+            }
+
+            bool edited = false;
+            for (int id : ids) {
+                if (find(foundIds.begin(), foundIds.end(), id) != foundIds.end()) {
+                auto it = pipes.find(id); 
+                if (it != pipes.end()) { 
+                    toggleRepair(it->second, id);
+                    if (it->second.underRepair) {
+                        removeConnectionsUsingPipe(id); // Удаляем соединения, если труба в ремонте
+                    }
+                edited = true;
+            } else {
+                nonExistentIds.push_back(id); 
+                }
+            }
+
+            if (edited) {
+                cout << "Статус труб обновлен." << endl;
+            }
+
+            if (!nonExistentIds.empty()) {
+                cout << "Труб(/ы) с ID: ";
+                for (size_t i = 0; i < nonExistentIds.size(); ++i) {
+                    cout << nonExistentIds[i];
+                    if (i < nonExistentIds.size() - 1) {
+                        cout << ", ";
+                    }
+                }
+                cout << " не существу(ет/ют)." << endl;
+            }
+        }
+    }
+}
+
     void PipeManager::deletePipesFound(const vector<int>& foundIds) {
         cout << "Введите ID труб для удаления, разделяя запятыми (или * для удаления всех найденных труб): ";
         string input;
@@ -272,9 +309,13 @@ using namespace std;
 
         if (input == "*") {
             for (int id : foundIds) {
-                pipes.erase(id);
-                cout << "Труба с ID " << id << " удалена." << endl;
-                log("Удалена труба с ID: " + to_string(id));
+                auto it = pipes.find(id);
+                if (it != pipes.end()) {
+                    removeConnectionsUsingPipe(id); // Удаляем соединения перед удалением трубы
+                    pipes.erase(it);
+                    cout << "Труба с ID " << id << " удалена." << endl;
+                    log("Удалена труба с ID: " + to_string(id));
+                }
             }
             cout << "Все найденные трубы удалены." << endl;
             log("Пользователь удалил все найденные трубы.");
@@ -306,9 +347,10 @@ using namespace std;
         }
 
         for (int id : ids) {
-            auto it = pipes.find(id); 
+            auto it = pipes.find(id);
             if (it != pipes.end()) {
-                pipes.erase(it); 
+                removeConnectionsUsingPipe(id); // Удаляем соединения перед удалением трубы
+                pipes.erase(it);
                 cout << "Труба с ID " << id << " удалена." << endl;
                 log("Удалена труба с ID: " + to_string(id));
             }

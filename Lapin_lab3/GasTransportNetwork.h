@@ -4,30 +4,40 @@
 #include "Pipe.h"
 #include "CompressorStation.h"
 #include <map>
-#include "PipeManager.h"
-#include "CompressorStationManager.h"
+#include <set>
+#include <stack>
+#include <vector>
+
+
+class PipeManager;
+class CompressorStationManager;
 
 struct Connection {
     int entryStationId;
     int exitStationId;
     int pipeId;
     int diameter;
+    int length;
 
-    Connection() = default;  // Конструктор по умолчанию
-    Connection(int entry, int exit, int pipe, int dia)
-        : entryStationId(entry), exitStationId(exit), pipeId(pipe), diameter(dia) {}
+    Connection() = default; 
+    Connection(int entry, int exit, int pipe, int dia, int len)
+        : entryStationId(entry), exitStationId(exit), pipeId(pipe), diameter(dia), length(len) {}
 };
 
-// Класс для газотранспортной сети
 class GasTransportNetwork {
 private:
-    std::map<int, Connection> connections; // Хранилище соединений, где ключ - ID соединения
-    int nextConnectionId = 1; // Счетчик ID соединений
+    void dfs(int node, map<int, vector<int>>& graph, set<int>& visited, set<int>& recursionStack, stack<int>& Stack, bool& hasCycle);
+    void findConnectedComponents(map<int, Connection>& connections, vector<vector<int>>& components);
 
 public:
     int inputDiameter();
     void connectStations(std::map<int, Pipe>& pipes, std::map<int, CompressorStation>& stations, PipeManager& pipeManager);
-    void viewConnections() const; // Метод для просмотра соединений
+    void viewConnections() const; 
+    void topologicalSort(const map<int, Connection>& connections);
+    void removeConnection();
+    void addConnection(int entryId, int exitId, int pipeId, int diameter, int length);
+    std::string saveConnections() const;
+    
 };
 
 #endif // GAS_TRANSPORT_NETWORK_H

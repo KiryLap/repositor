@@ -39,7 +39,7 @@ template double readPositive<double>(const string &prompt, const string &errorMe
 template int readPositive<int>(const string &prompt, const string &errorMessage, const int);
 
 long numberOrDefault(const string &input, long defaultValue) {
-    if (input.length() < 2 || input.empty() ||
+    if (input.empty() || 
         find_if(input.begin(), input.end(), [](unsigned char c) { return !isdigit(c); }) != input.end()) {
         return defaultValue;
     }
