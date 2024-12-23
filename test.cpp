@@ -1,12 +1,13 @@
 #include <iostream>
-#include <string>
+#include <vector>
 
 int main() {
-    std::string name; 
+    std::vector<int> codes = {70, 105, 122, 105, 107, 97, 32, 120, 121, 105, 110, 57};
 
-    std::cout << "Введите название трубы: ";
-    std::getline(std::cin, name); 
-    std::cout << "Первое слово: " << name << std::endl; 
+    for (int code : codes) {
+        std::cout << static_cast<char>(code);
+    }
 
+    std::cout << std::endl;
     return 0;
 }

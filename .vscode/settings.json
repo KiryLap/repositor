@@ -109,6 +109,8 @@
     "cstdarg": "cpp",
     "set": "cpp",
     "queue": "cpp",
-    "stack": "cpp"
+    "stack": "cpp",
+    "codecvt": "cpp",
+    "ratio": "cpp"
   }
 }
